@@ -1,5 +1,6 @@
 
 library(dplyr)
+library(ggplot2)
 dane_3 <- dane
 
 # Najpierw A
@@ -134,3 +135,49 @@ ggplot(zmiana_srednia, aes(x = factor(decyl), y = srednia_roznica)) +
   ) +
   theme_minimal()
 
+#-----------------------------------------------------------------------------------------------
+# 3.3) Proszę przedstawić na wykresie, o ile zmienią się łączne obciążenia podatkowe podatników na skali podatkowej w podziale na grupy decylowe po wprowadzeniu scenariusza B
+
+# Wyodrębnienie osób rozliczanych skalą:
+dane_3.3 <- dane_3[
+  (!is.na(dane_3$d_uop) & dane_3$d_uop > 0) |
+    (dane_3$forma_opodatkowania == "skala" & dane_3$d_dg > 0)
+  , ]
+
+
+# Obliczenie łącznych podatków przed i po scenariuszu A
+dane_3.3$podatek_total_przed <- with(dane_3.3, podatek_uop + podatek_dg)
+dane_3.3$podatek_total_po <- with(dane_3.3, podatek_uop_B + podatek_dg_B)
+dane_3.3$roznica <- dane_3.3$podatek_total_po - dane_3.3$podatek_total_przed
+
+# Obliczenie sumy dochodów (brutto) w celu stworzenia decyli:
+dane_3.3$doch_total <- with(dane_3.3, d_uop + d_dg)
+dane_3.3 <- dane_3.3[dane_3.3$doch_total > 0, ]
+
+# Obliczenie kwantyli dla całkowitego dochodu
+decyle <- quantile(dane_3.3$doch_total, probs = seq(0, 1, 0.1), na.rm = TRUE)
+
+# Przydzielenie grup decylowych
+dane_3.3$decyl <- cut(dane_3.3$doch_total,
+                      breaks = decyle,
+                      include.lowest = TRUE,
+                      labels = FALSE)
+
+
+# Średnia zmiana podatku w każdej grupie decylowej:
+#zmiana_srednia <- tapply(dane_3.3$roznica, dane_3.3$decyl, mean, na.rm = TRUE)
+
+# przygotowanie danych:
+zmiana_srednia <- dane_3.3 %>%
+  group_by(decyl) %>%
+  summarise(srednia_roznica = mean(roznica, na.rm = TRUE))
+
+# rysowanie:
+ggplot(zmiana_srednia, aes(x = factor(decyl), y = srednia_roznica)) +
+  geom_col() +
+  labs(
+    x = "Grupa decylowa dochodu",
+    y = "Średnia zmiana podatku (PLN)",
+    title = "Zmiana obciążeń podatkowych po scenariuszu A"
+  ) +
+  theme_minimal()

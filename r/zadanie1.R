@@ -1,6 +1,8 @@
 
 setwd("E:/Projekty/analiza-makro-konkurs")
 
+library(dplyr)
+library(ggplot2)
 # 1. Wczytanie danych 
 dane <- read.csv2("E:/Projekty/analiza-makro-konkurs/data/data.csv", 
                   stringsAsFactors = FALSE)
@@ -9,7 +11,7 @@ dane$d_uop[is.na(dane$d_uop)] <- 0
 dane$d_dg[is.na(dane$d_dg)] <- 0
 dane$d_fin[is.na(dane$d_fin)] <- 0
 #-----------------------------------------------------------------------------------------------
-library(dplyr)
+
 # 3. Dodajemy kolumnę suma_skala
 dane <- dane %>%
   mutate(
@@ -75,9 +77,6 @@ czy_rowne <- abs(suma_wszystkich - suma_kumulacyjna_ostatni) < 1e-4
 # 5. Wyświetlenie podsumowania
 cat("Suma wpływów do budżetu Fiskalii z tytułu wszystkich trzech istniejących podatków dochodowych wynosi:", 
     format(suma_kumulacyjna_ostatni, big.mark = " ", decimal.mark = ","), "zł\n")
-
-# 6. Zapis do pliku (opcjonalnie)
-write.csv2(dane, "data/r.csv", row.names = FALSE)
 #-----------------------------------------------------------------------------------------------
 # ----------------------------------------------------------
 

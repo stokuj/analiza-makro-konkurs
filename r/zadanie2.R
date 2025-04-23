@@ -18,20 +18,6 @@ dane_2.1 <- dane_2.1[!is.na(dane_2.1$d_uop) & dane_2.1$d_uop > 0, ]
 dane_2.1_sorted <- dane_2.1[order(dane_2.1$d_uop), ]
 
 
-
-# Zakresy osi z buforem 20%
-x_min <- min(dane_2.1_sorted$d_uop)
-x_max <- max(dane_2.1_sorted$d_uop)
-x_range <- x_max - x_min
-xlim <- c(x_min - 0.1 * x_range, x_max + 0.1 * x_range)
-
-y_min <- min(dane_2.1_sorted$klin_podatkowy * 100)
-y_max <- max(dane_2.1_sorted$klin_podatkowy * 100)
-y_range <- y_max - y_min
-ylim <- c(y_min - 0.1 * y_range, y_max + 0.1 * y_range)
-
-
-
 # 4) Wykres linii klina podatkowego
 # Rysowanie wykresu
 plot(dane_2.1_sorted$d_uop,
