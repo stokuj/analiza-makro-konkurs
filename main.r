@@ -59,12 +59,26 @@ plot_tax_wedge <- function(data, income_col, tax_col, title) {
     arrange({{income_col}}) %>%
     ggplot(aes({{income_col}}, klin_podatkowy)) +
     geom_line(color = "blue", linewidth = 1) +
-    labs(x = "Dochód brutto (PLN)", 
+    scale_x_continuous(
+      labels = function(x) {
+        ifelse(x >= 100000, 
+               paste0(round(x/1000), " tys."), 
+               format(x, big.mark = " ", decimal.mark = ",", scientific = FALSE))
+      }
+    ) +
+    labs(x = "Dochód brutto (PLN)",
          y = "Klin podatkowy (% dochodu)",
          title = title) +
     theme_minimal() +
-    theme(panel.grid = element_blank())
+    theme(
+      panel.grid.major = element_line(color = "gray90", linewidth = 0.2),
+      panel.grid.minor = element_line(color = "gray95", linewidth = 0.1),
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+      axis.title = element_text(size = 12),
+      axis.text = element_text(size = 10)
+    )
 }
+
 
 # Funkcja do wykresów decylowych
 plot_decile_tax <- function(data, income_col, tax_col, title) {
@@ -105,7 +119,7 @@ dane_dg <- dane %>%
 plot_tax_wedge(dane_dg, d_dg, podatek_dg_opt, 
                "(2.4) Klin podatkowy dla działalności gospodarczej")
 # 2.5 
-plot_decile_tax(dane_dg, d_dg, p_dg,
+plot_decile_tax(dane_dg, d_dg, podatek_dg_opt,
                 "Empiryczna stopa opodatkowania wg decyli (DG)")
 ##########################################################################################################################
 # Funkcje do obliczania podatków z zabezpieczeniem przed ujemnymi wartościami
