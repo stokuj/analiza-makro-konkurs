@@ -1,0 +1,365 @@
+---
+title: "Analiza rozkładu obciążeń podatkowych"
+author: "Krystian Stasica"
+date: "`r Sys.Date()`"
+lang: pl
+output:
+  bookdown::pdf_document2:
+    toc: true
+    highlight: tango
+    latex_engine: xelatex
+    extra_dependencies: fontspec
+bibliography: bibliografia.bib    
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Analiza problemu
+
+W celu realizacji tematu konieczna jest analiza systemu podatkowego funkcjonującego w państwie Fiskalia, w którym obywatele osiągają dochody w trzech kategoriach: pracy najemnej, działalności gospodarczej oraz rynku kapitałowego. Podstawą analizy są dane dotyczące rocznych deklaracji podatkowych obywateli. System charakteryzuje się trzema metodami opodatkowania: skalą podatkową z progresywnymi stawkami, podatkiem liniowym oraz podatkiem od zysków kapitałowych.
+
+Dochody z działalności gospodarczej mogą być opodatkowane według skali podatkowej lub podatkiem liniowym, w zależności od wyboru przedsiębiorcy dokonanego na początku roku podatkowego. Natomiast dochody uzyskiwane z pracy najemnej są zawsze opodatkowane według skali podatkowej. W przypadku, gdy podatnik osiąga dochody zarówno z pracy najemnej, jak i działalności gospodarczej i wybrał skalę podatkową, podstawę opodatkowania stanowi suma tych dochodów. Co oznacza, że w przypadku wybrania 'skali' należy obliczyć podatek kapitałowy oraz podatek liczony skalą podatkową, gdzie podstawa to suma dochodów z działalności oraz pracy najemnej. Natomiast w innym przypadku nalezy obliczyć osobno podatek od działalności gospodarczej, kapitałowy oraz od pracy najemnej.
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+# Automatyczna instalacja brakujących pakietów
+required_packages <- c("dplyr", "ggplot2")
+
+for (pkg in required_packages) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    install.packages(pkg)
+  }
+}
+# Ładowanie pakietów
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(kableExtra)
+```
+
+# Realizacja zadań
+
+W celu realizacji zadań i podjęcia się tematu, załadowano dane do tabeli.
+
+```{r, echo=FALSE}
+# Komunikaty o załadowaniu
+cat("Pakiety 'dplyr', 'ggplot2', 'gridExtra' oraz 'kableExtra' zostały poprawnie załadowane.\n")
+
+# Wczytywanie danych
+dane <- read.csv2("E:/Projekty/analiza-makro-konkurs/data/data.csv") %>%
+  mutate(across(c(d_uop, d_dg, d_fin), ~ ifelse(is.na(.), 0, .)))
+
+cat("Dane zostały poprawnie wczytane. Liczba wierszy:", nrow(dane), "\n")
+```
+
+
+## Zadanie 1: Analiza wpływów do budżetu Fiskalii
+
+```{r, echo=FALSE}
+# Funkcje do obliczania podatków z zabezpieczeniem przed ujemnymi wartościami
+calculate_tax <- function(income, tax_type) {
+  case_when(
+    tax_type == "uop" ~ {
+      base <- pmax(income - 25000, 0) # Uwzględniamy kwote wolną
+      tax <- pmin(base, 100000) * 0.15 + pmax(base - 100000, 0) * 0.40
+      pmax(tax, 0)  # Zabezpieczenie przed ujemnymi wartościami
+    },
+    tax_type == "dg_skala" ~ {
+      base <- pmax(income - 25000, 0) # Uwzględniamy kwote wolną
+      tax <- pmin(base, 100000) * 0.15 + pmax(base - 100000, 0) * 0.40
+      pmax(tax, 0)  # Zabezpieczenie przed ujemnymi wartościami
+    },
+    tax_type == "dg_liniowa" ~ pmax(income * 0.20, 0),
+    tax_type == "fin" ~ pmax(income * 0.25, 0),
+    TRUE ~ 0
+  )
+}
+
+# Obliczenie podatków
+dane <- dane %>%
+  mutate(
+    suma_skala = ifelse(forma_opodatkowania == "skala", d_uop + d_dg, 0),
+    
+    p_uop = ifelse(forma_opodatkowania != "skala", 
+                   calculate_tax(d_uop, "uop"), 0),
+    
+    p_dg = case_when(
+      forma_opodatkowania == "skala" ~ calculate_tax(suma_skala, "dg_skala"),
+      forma_opodatkowania == "liniowka" ~ calculate_tax(d_dg, "dg_liniowa"),
+      TRUE ~ 0
+    ),
+    
+    p_fin = calculate_tax(d_fin, "fin"),
+    
+    p_sum = p_uop + p_dg + p_fin
+  )
+
+# Podsumowanie z formatowaniem
+total_tax <- sum(dane$p_sum, na.rm = TRUE)
+cat("Suma wpływów do budżetu Fiskalii wyniosła:", 
+    format(round(total_tax), big.mark = " ", decimal.mark = ","), 
+    "zł\n")
+```
+
+## Zadanie 2: Analiza funkcji redystrybucyjnej podatków w Fiskalii
+
+```{r, echo=FALSE}
+# Funkcja pomocnicza do tworzenia wykresów
+plot_tax_wedge <- function(data, income_col, tax_col, title) {
+  data %>%
+    filter({{income_col}} > 0) %>%
+    mutate(klin_podatkowy = {{tax_col}} / {{income_col}} * 100) %>%
+    arrange({{income_col}}) %>%
+    ggplot(aes({{income_col}}, klin_podatkowy)) +
+    geom_line(color = "blue", linewidth = 1) +
+    scale_x_continuous(
+      labels = function(x) {
+        ifelse(x >= 100000, 
+               paste0(round(x/1000), " tys."), 
+               format(x, big.mark = " ", decimal.mark = ",", scientific = FALSE))
+      }
+    ) +
+    labs(x = "Dochód brutto (PLN)",
+         y = "Klin podatkowy (% dochodu)",
+         title = title
+         ) +
+    theme_minimal() +
+    theme(
+      panel.grid.major = element_line(color = "gray90", linewidth = 0.2),
+      panel.grid.minor = element_line(color = "gray95", linewidth = 0.1),
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+      axis.title = element_text(size = 12),
+      axis.text = element_text(size = 10)
+    )
+}
+
+# Funkcja do wykresów decylowych
+plot_decile_tax <- function(data, income_col, tax_col, title) {
+  data %>%
+    filter({{income_col}} > 0) %>%
+    mutate(decyl = ntile({{income_col}}, 10),
+           stopa_podatkowa = {{tax_col}} / {{income_col}} * 100) %>%
+    group_by(decyl) %>%
+    summarise(srednia_stopa = mean(stopa_podatkowa, na.rm = TRUE)) %>%
+    ggplot(aes(factor(decyl), srednia_stopa)) +
+    geom_col(fill = "navyblue") +
+    labs(x = "Grupa decylowa dochodu", 
+         y = "Średnia stopa opodatkowania (%)",
+         title = title
+         ) + 
+    theme_minimal()+
+    theme(
+      panel.grid.major = element_line(color = "gray90", linewidth = 0.2),
+      panel.grid.minor = element_line(color = "gray95", linewidth = 0.1),
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+      axis.title = element_text(size = 12),
+      axis.text = element_text(size = 10)
+    )
+}
+```
+
+```{r, echo=FALSE}
+# Filtrowanie danych dla 2.1 # 2.2 
+dane_uop <- dane %>% 
+  filter(d_uop > 0, d_dg == 0, d_fin == 0, !is.na(d_uop))
+```
+### Opodatkowanie dochodów z pracy najemnej
+
+Progresywność opodatkowania pracy w Fiskalii jest wyraźnie widoczna, co potwierdza rosnąca stopa opodatkowania wraz ze wzrostem dochodu, przy czym najwyższe decyle dochodowe ponoszą proporcjonalnie większe obciążenia podatkowe niż grupy o niższych dochodach, co jest charakterystyczne dla systemów progresywnych. Efektywna stawka rośnie najszybciej do ok. 150 tys. PLN, a następnie wolniej, co widać w skoku od kilku procent w najniższych decylach do ponad 15 % w najwyższym.
+
+```{r, echo=FALSE, fig.width=12, fig.align='center', fig.cap="Klin podatkowy i empiryczna stopa opodatkowania według poziomu dochodu i grup decylowych (UoP)"}
+p1 <- plot_tax_wedge(dane_uop, d_uop, p_uop, "(2.1) Klin podatkowy dla pracy najemnej")
+p2 <- plot_decile_tax(dane_uop, d_uop, p_uop, "(2.2) Empiryczna stopa opodatkowania wg decyli (UoP)")
+grid.arrange(p1, p2, ncol = 2)
+```
+
+### Opodatkowanie dochodów z działalności gospodarczej
+
+```{r, echo=FALSE, out.width = "50%", out.height = "50%", fig.align='center', fig.cap="(2.4) Klin podatkowy dla działalności gospodarczej"}
+# 2.4 & # 2.5 
+dane_dg <- dane %>% 
+  filter(d_dg > 0, d_uop == 0, d_fin == 0, !is.na(d_dg)) %>%
+  mutate(
+    tax_skala = pmax(d_dg - 25000, 0) %>% 
+      {pmin(., 100000) * 0.15 + pmax(. - 100000, 0) * 0.40}, tax_liniowa = d_dg * 0.20,
+    podatek_dg_opt = pmin(tax_skala, tax_liniowa)
+  )
+```
+
+Progresywność opodatkowania działalności gospodarczej w Fiskalii — wydaje się ograniczona. Na wykresie po lewej stronie widać, że klin podatkowy bardzo szybko rośnie do poziomu około 20% i następnie się wypłaszcza. To wskazuje na brak dalszej progresji po osiągnięciu pewnego poziomu dochodu. Ponadto wykres po prawej stronie również pokazuje, że od 5. decyla wzwyż stopa podatkowa przestaje rosnąć i stabilizuje się na poziomie około 20%, co sugeruje proporcjonalność lub wręcz regresję w najwyższych grupach dochodowych.
+
+```{r, echo=FALSE, fig.width=12, fig.align='center', fig.cap="Klin podatkowy i empiryczna stopa opodatkowania według poziomu dochodu i grup decylowych (DG)"}
+p3 <- plot_tax_wedge(dane_dg, d_dg, podatek_dg_opt, "(2.4) Klin podatkowy dla działalności gospodarczej")
+p4 <- plot_decile_tax(dane_dg, d_dg, podatek_dg_opt, "(2.5) Empiryczna stopa opodatkowania wg decyli (DG)")
+grid.arrange(p3, p4, ncol = 2)
+```
+
+## Zadanie 3: Analiza reform podatkówych w Fiskalii
+
+```{r, echo=FALSE}
+# Funkcje do obliczania podatków z zabezpieczeniem przed ujemnymi wartościami
+calculate_tax_A <- function(income) {
+  base <- pmax(income - 25000, 0)
+  tax <- pmin(base, 100000) * 0.10 + pmax(base - 100000, 0) * 0.45
+  pmax(tax, 0)  # Gwarancja nieujemności
+}
+
+calculate_tax_B <- function(income) {
+  base <- pmax(income - 25000, 0)
+  tax <- pmin(base, 100000) * 0.15 + pmax(base - 100000, 0) * 0.45 - 2500
+  pmax(tax, 0)  # Gwarancja nieujemności
+}
+
+# Obliczenia podatków dla scenariuszy A i B z zabezpieczeniami
+dane_3 <- dane %>%
+  mutate(
+    # Scenariusz A
+    p_uop_A = ifelse(forma_opodatkowania != "skala", 
+                     pmax(calculate_tax_A(d_uop), 0), 0),  # Podwójne zabezpieczenie
+    p_dg_A = case_when(
+      forma_opodatkowania == "skala" ~ pmax(calculate_tax_A(d_uop + d_dg), 0),
+      forma_opodatkowania == "liniowka" ~ pmax(d_dg * 0.20, 0),  # Zabezpieczenie
+      TRUE ~ 0
+    ),
+    
+    # Scenariusz B
+    p_uop_B = ifelse(forma_opodatkowania != "skala", 
+                     pmax(calculate_tax_B(d_uop), 0), 0),  # Podwójne zabezpieczenie
+    p_dg_B = case_when(
+      forma_opodatkowania == "skala" ~ pmax(calculate_tax_B(d_uop + d_dg), 0),
+      forma_opodatkowania == "liniowka" ~ pmax(d_dg * 0.20, 0),  # Zabezpieczenie
+      TRUE ~ 0
+    ),
+    
+    # Sumy podatków z dodatkowym zabezpieczeniem
+    p_sum_A = pmax(p_uop_A + p_dg_A + p_fin, 0),
+    p_sum_B = pmax(p_uop_B + p_dg_B + p_fin, 0)
+  )
+
+summarize_results <- function() {
+  sums <- dane_3 %>% 
+    summarise(
+      current = sum(p_sum, na.rm = TRUE),
+      scenario_A = sum(p_sum_A, na.rm = TRUE),
+      scenario_B = sum(p_sum_B, na.rm = TRUE)
+    )
+  
+  data.frame(
+    Scenariusz = c("Obecny system", "Scenariusz A", "Scenariusz B"),
+    Suma_podatków = format(c(sums$current, sums$scenario_A, sums$scenario_B), 
+                           big.mark = " ", nsmall = 0),
+    Różnica_abs = format(c(0, sums$scenario_A - sums$current, sums$scenario_B - sums$current), 
+                         big.mark = " ", nsmall = 0),
+    Zmiana_proc = paste0(round(c(0, 
+                                 (sums$scenario_A - sums$current)/sums$current * 100,
+                                 (sums$scenario_B - sums$current)/sums$current * 100), 1), "%")
+  ) %>% 
+    rename(`Różnica (PLN)` = Różnica_abs, `Zmiana (%)` = Zmiana_proc)
+}
+
+# Funkcja do przygotowania danych
+prepare_tax_table <- function(data, scenario) {
+  tax_col <- ifelse(scenario == "A", "p_uop_A + p_dg_A", "p_uop_B + p_dg_B")
+  
+  result <- data %>%
+    filter((d_uop > 0 | (forma_opodatkowania == "skala" & d_dg > 0))) %>%
+    mutate(
+      doch_total = d_uop + d_dg,
+      podatek_total_przed = pmax(p_uop + p_dg, 0),
+      podatek_total_po = pmax(!!rlang::parse_expr(tax_col), 0),
+      roznica = podatek_total_po - podatek_total_przed,
+      decyl = ntile(doch_total, 10)
+    ) %>%
+    group_by(decyl) %>%
+    summarise(
+      srednia_roznica = mean(roznica, na.rm = TRUE),
+      liczba_osob = n(),
+      liniowa_liczba = sum(forma_opodatkowania == "liniowka", na.rm = TRUE),
+      procent_liniowa = round(100 * liniowa_liczba / liczba_osob, 1),
+      srednia_roznica_liniowa = mean(roznica[forma_opodatkowania == "liniowka"], na.rm = TRUE),
+      
+      skala_liczba = sum(forma_opodatkowania == "skala", na.rm = TRUE),
+      procent_skala = round(100 * skala_liczba / liczba_osob, 1),
+      srednia_roznica_skala = mean(roznica[forma_opodatkowania == "skala"], na.rm = TRUE),
+      
+      nd_liczba = sum(forma_opodatkowania == "nie dotyczy", na.rm = TRUE),
+      procent_nd = round(100 * nd_liczba / liczba_osob, 1),
+      srednia_roznica_nd = mean(roznica[forma_opodatkowania == "nie dotyczy"], na.rm = TRUE)
+    )
+  
+  assign(paste0("tax_table_", scenario), result, envir = .GlobalEnv)
+}
+
+# Funkcja do rysowania wykresu
+plot_tax_changes <- function(scenario) {
+  df <- get(paste0("tax_table_", scenario), envir = .GlobalEnv)
+  
+  ggplot(df, aes(factor(decyl), srednia_roznica)) +
+    geom_col(fill = "#59b69b") +
+    geom_text(
+      aes(label = round(srednia_roznica, 0)),
+      vjust = -0.5,
+      size = 3,
+      color = "black"
+    ) +
+    labs(
+      x = "Grupa decylowa dochodu",
+      y = "Średnia zmiana podatku (PLN)",
+      title = paste("Scenariusz", scenario)
+    ) +
+    scale_y_continuous(limits = c(-5000, 1000)) +
+    theme_minimal() +
+    theme(
+      panel.grid.major = element_line(color = "gray90", linewidth = 0.2),
+      panel.grid.minor = element_line(color = "gray95", linewidth = 0.1),
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+      axis.title = element_text(size = 12),
+      axis.text = element_text(size = 10)
+    )
+}
+
+```
+
+```{r tabela, echo=FALSE, results='asis'}
+summarize_results() |>
+  knitr::kable(caption = "Podsumowanie wyników") |>
+  kable_styling(latex_options = "hold_position")
+```
+
+```{r, echo=FALSE}
+prepare_tax_table(dane_3, "A")
+prepare_tax_table(dane_3, "B")
+```
+
+Reforma podatkowa "A" zmniejszyłaby wpływy budżetu Fiskalii o 648 mln zł (spadek o 5,8%), natomiast scenariusz „B” – o 545 mln zł (4,9%).
+Pod względem redystrybucji, w scenariuszu A największe korzyści odnoszą podatnicy ze średnich grup dochodowych (decyle 5–8). Dzięki obniżeniu dolnej stawki podatkowej ich ulga rośnie wraz z dochodem. Najbogatsi (decyle 9–10), mimo stawki 45%, także zyskują w porównaniu z obecnym systemem. Reforma A wzmacnia progresywność i preferuje klasę średnią, ale kosztem większego ubytku w budżecie.
+
+W scenariuszu "B" redystrybucja jest bardziej równomierna dzięki uldze 2 500 zł. Największe korzyści odnoszą podatnicy z dolnych i średnich decyli (2-6), dla których kwota ulgi stanowi znaczący procent ich obciążeń podatkowych. W efekcie ten wariant zapewnia szersze rozłożenie korzyści przy stosunkowo mniejszym wpływie na budżet (spadek wpływów o 4,9%).
+Warto przy tym zauważyć, że w wyższych decylach rośnie odsetek przedsiębiorców rozliczających się liniowo. Ponieważ reforma nie objęła podatku liniowego, a jedynie skalę podatkową, ci podatnicy - mimo że część dochodów (z pracy najemnej) rozliczają na skali - odczuwają mniejsze korzyści z reformy. W praktyce oznacza to, że efektywne obniżenie opodatkowania w ich przypadku jest mniejsze niż wśród osób rozliczających się wyłącznie na zasadach ogólnych.
+
+```{r obciazenie, echo=FALSE, fig.width=12, fig.align='center', fig.cap="Zmiana łącznego obciążenia podatkowego podatników na skali podatkowej"}
+
+p5 <- plot_tax_changes("A")
+p6 <- plot_tax_changes("B")
+grid.arrange(p5, p6, ncol = 2)
+```
+
+## Zadanie 4: Wpływ progresywności podatków na rynek pracy.
+
+Progresywność systemu podatku dochodowego wpływa na rynek pracy głównie przez zmianę bodźców do pracy oraz wyboru liczby przepracowanych godzin. Im bardziej podatek jest progresywny, tym silniejsze są efekty dochodowy i substytucyjny: osoby dobrze zarabiające mogą zniechęcać się do nadgodzin (zmniejszając podaż pracy w górnych segmentach rozkładu dochodów), a osoby o niższych dochodach, dzięki niższym stawkom na najniższych progach, mogą być zachęcone do wejścia na rynek pracy.
+
+Badania Holtera, Kruegera i Stepanchuka wskazują, że wyższa progresja może zniechęcać osoby o wysokich dochodach (np. w małżeństwach) do podejmowania dodatkowej pracy z powodu niższego krańcowego zysku z kolejnych godzin, a równocześnie skłaniać osoby o niższym potencjale dochodowym, zwłaszcza samotne kobiety, do zatrudnienia, gdzie efektywne opodatkowanie jest niższe. Model pokazuje także, że silna progresja może ograniczać akumulację doświadczenia zawodowego, co wpływa na długofalowe dochody i potencjał podatkowy państwa [@holter2019laffer].
+
+Progresja podatku dochodowego działa także przez dwa główne mechanizmy: moderację płac oraz efekt kompozycyjny. Wyższe stawki dla najlepiej zarabiających ograniczają korzyści z dużych podwyżek, co prowadzi do umiarkowania żądań płacowych i obniża koszty pracy dla pracodawców, a tym samym zwiększa popyt na pracę i zmniejsza bezrobocie. Jednocześnie relatywnie niższe obciążenia dla osób o niskich dochodach poprawiają ich sytuację na rynku pracy i sprzyjają ich zatrudnieniu. Badania empiryczne dla krajów OECD pokazują, że większa progresywność może prowadzić do wzrostu zatrudnienia i spadku bezrobocia, choć nieco obniża średnią produktywność pracy [@lucifora2015progressive].
+
+Z drugiej strony, progresywny system podatkowy może ograniczać mobilność zawodową, bo zmniejsza zachęty do zmiany pracy na lepiej płatną – część zysków z wyższych zarobków trafia do fiskusa. Gentry i Hubbard wykazali na danych z USA, że zarówno wyższe stawki krańcowe, jak i większa wypukłość systemu istotnie zmniejszają prawdopodobieństwo awansu zawodowego, co może spowalniać wzrost płac w długim okresie [@gentry2002].
+
+W modelach z tarciami na rynku pracy (np. @zanetti2012laffer) widzimy również, że wysokie podatki mogą zniechęcać firmy do inwestycji w kapitał ludzki, podczas gdy niższe obciążenia pracowników o niskich kwalifikacjach sprzyjają ich zatrudnianiu. Projektując system podatkowy, należy więc znaleźć równowagę między celami redystrybucyjnymi a utrzymaniem bodźców do pracy i mobilności zawodowej.
+
+\newpage
+# Bibliografia
+
+
