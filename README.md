@@ -21,29 +21,25 @@ Projekt przygotowany na konkurs analityczny. Tematem analizy była dystrybucja o
   - ulga + zmiana progu,
   - wpływ reform na wpływy budżetowe i grupy społeczne.
 
-- Komentarz teoretyczny dotyczący wpływu progresji na rynek pracy.
-
 ## 🛠️ Technologie
 
 - **Język**: R
-- **Biblioteki**: `dplyr`, `ggplot2`, `readr`, `scales`, `knitr`, `rmarkdown`
+- **Biblioteki**: `dplyr`, `ggplot2`, `gridExtra`, `kableExtra`
 - **Format raportu**: RMarkdown → PDF
 
 ## 📂 Struktura
 
 ```
-📁 data/         # Dane wejściowe
-📁 plots/        # Wygenerowane wykresy
-📄 analiza_makro.Rmd    # Główny raport (RMarkdown)
-📄 wyniki.pdf           # Gotowy raport w PDF
-📄 functions.R          # Pomocnicze funkcje
+📁 data.csv        # Dane wejściowe
+📄 analiza.Rmd    # Główny raport (RMarkdown)
+📄 analiza.pdf           # Gotowy raport w PDF
 ```
 
 ## ▶️ Uruchamianie
 
 W RStudio lub z konsoli R:
 ```r
-rmarkdown::render("analiza_makro.Rmd")
+rmarkdown::render("main.Rmd")
 ```
 
 ## 📄 Licencja
