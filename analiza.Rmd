@@ -49,7 +49,7 @@ W celu realizacji zadań i podjęcia się tematu, załadowano dane do tabeli.
 cat("Pakiety 'dplyr', 'ggplot2', 'gridExtra' oraz 'kableExtra' zostały poprawnie załadowane.\n")
 
 # Wczytywanie danych
-dane <- read.csv2("E:/Projekty/analiza-makro-konkurs/data/data.csv") %>%
+dane <- read.csv2("data.csv") %>%
   mutate(across(c(d_uop, d_dg, d_fin), ~ ifelse(is.na(.), 0, .)))
 
 cat("Dane zostały poprawnie wczytane. Liczba wierszy:", nrow(dane), "\n")
