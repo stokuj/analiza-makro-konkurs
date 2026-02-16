@@ -1,51 +1,46 @@
-# 💰 Analiza rozkładu obciążeń podatkowych – projekt konkursowy
+﻿# Tax Burden Distribution Analysis - Competition Project
 
-## 📌 Opis projektu
+## Project Overview
 
-Projekt przygotowany na konkurs analityczny. Tematem analizy była dystrybucja obciążeń podatkowych w fikcyjnym państwie **Fiskalia**, w oparciu o dane mikropodatkowe. Celem było zbadanie, jak różne źródła dochodów i formy opodatkowania wpływają na system redystrybucji.
+This project was prepared for an analytical competition.
+The analysis focuses on the distribution of tax burdens in the fictional country **Fiskalia**, based on micro-level tax data.
 
-## 📊 Zakres analizy
+The main goal is to examine how different income sources and tax regimes affect redistribution outcomes.
 
-- Obliczenie całkowitych wpływów z trzech podatków:
-  - progresywny PIT,
-  - liniowy PIT,
-  - podatek od zysków kapitałowych.
+## Scope of Analysis
 
-- Analiza redystrybucji:
-  - empiryczne i teoretyczne wykresy klina podatkowego,
-  - średnia efektywna stawka opodatkowania według decyli dochodowych,
-  - ocena progresji opodatkowania.
+- Government revenue calculations for three tax types: progressive PIT, flat PIT, and capital gains tax.
+- Redistribution analysis using empirical/theoretical tax wedge charts, effective tax rates by income decile, and progressivity assessment.
+- Two reform scenarios (rate change and allowance plus threshold change), including effects on budget revenue and social groups.
 
-- Dwa scenariusze reform:
-  - zmiana stawek,
-  - ulga + zmiana progu,
-  - wpływ reform na wpływy budżetowe i grupy społeczne.
+## Tech Stack
 
-## 🛠️ Technologie
+- Language: `R`
+- Libraries: `dplyr`, `ggplot2`, `gridExtra`, `kableExtra`, `bookdown`
+- Report format: `RMarkdown -> PDF`
 
-- **Język**: R
-- **Biblioteki**: `dplyr`, `ggplot2`, `gridExtra`, `kableExtra`
-- **Format raportu**: RMarkdown → PDF
+## Project Structure
 
-## 📂 Struktura
-
-```
-📁 data.csv        # Dane wejściowe
-📄 analiza.Rmd    # Główny raport (RMarkdown)
-📄 analiza.pdf           # Gotowy raport w PDF
+```text
+data.csv                                      # Input dataset
+analiza.Rmd                                   # Main analysis report (RMarkdown)
+analiza.pdf                                   # Rendered PDF report
+bibliografia.bib                              # Bibliography
+Załącznik_nr_2_-_zadania_konkursowe_5_edycja-1.pdf  # Competition task statement
 ```
 
-## ▶️ Uruchamianie
+## How to Run
 
-W RStudio lub z konsoli R:
+From RStudio or the R console:
+
 ```r
-rmarkdown::render("main.Rmd")
+rmarkdown::render("analiza.Rmd")
 ```
 
-## 📄 Licencja
+## License
 
-Projekt dostępny na licencji MIT.
+This project is licensed under the MIT License. See `LICENSE` for details.
 
----
+## Note
 
-> 📎 Projekt edukacyjny – dane i scenariusze mają charakter fikcyjny.
+This is an educational project. Data and scenarios are fictional.
