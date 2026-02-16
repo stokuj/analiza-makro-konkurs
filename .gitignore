@@ -1,9 +1,24 @@
-# Dependencies
-.psci_modules
-.spago
-bower_components
-node_modules
+# R session/user files
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
 
-# Generated files
-.psci
-output
+# R package/library environments
+renv/library/
+renv/staging/
+packrat/lib*/
+packrat/src/
+
+# R Markdown / knitr intermediate files
+*.utf8.md
+*.knit.md
+*_cache/
+*_files/
+
+# Temporary / logs
+*.tmp
+*.temp
+*.log
+~$*

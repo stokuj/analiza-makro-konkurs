@@ -26,7 +26,7 @@ data.csv                                      # Input dataset
 analiza.Rmd                                   # Main analysis report (RMarkdown)
 analiza.pdf                                   # Rendered PDF report
 bibliografia.bib                              # Bibliography
-Załącznik_nr_2_-_zadania_konkursowe_5_edycja-1.pdf  # Competition task statement
+Załącznik_nr_2...                             # Competition task statement
 ```
 
 ## How to Run
