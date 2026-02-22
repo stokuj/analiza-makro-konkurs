@@ -1,11 +1,20 @@
 ﻿# Tax Burden Distribution Analysis - Competition Project
 
-## Project Overview
-
 This project was prepared for an analytical competition.
-The analysis focuses on the distribution of tax burdens in the fictional country **Fiskalia**, based on micro-level tax data.
+This is an educational project, data and scenarios are fictional.
 
+The analysis focuses on the distribution of tax burdens in the fictional country **Fiskalia**, based on micro-level tax data.
 The main goal is to examine how different income sources and tax regimes affect redistribution outcomes.
+
+## Project Structure
+
+```text
+data.csv                                      # Input dataset
+analiza.Rmd                                   # Main analysis report (RMarkdown)
+analiza.pdf                                   # Rendered PDF report
+bibliografia.bib                              # Bibliography
+Załącznik_nr_2...                             # Competition task statement
+```
 
 ## Scope of Analysis
 
@@ -19,16 +28,6 @@ The main goal is to examine how different income sources and tax regimes affect 
 - Libraries: `dplyr`, `ggplot2`, `gridExtra`, `kableExtra`, `bookdown`
 - Report format: `RMarkdown -> PDF`
 
-## Project Structure
-
-```text
-data.csv                                      # Input dataset
-analiza.Rmd                                   # Main analysis report (RMarkdown)
-analiza.pdf                                   # Rendered PDF report
-bibliografia.bib                              # Bibliography
-Załącznik_nr_2...                             # Competition task statement
-```
-
 ## How to Run
 
 From RStudio or the R console:
@@ -40,7 +39,3 @@ rmarkdown::render("analiza.Rmd")
 ## License
 
 This project is licensed under the MIT License. See `LICENSE` for details.
-
-## Note
-
-This is an educational project. Data and scenarios are fictional.
